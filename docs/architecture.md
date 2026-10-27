@@ -1,23 +1,47 @@
-# Forge Architecture Foundation
+# Forge Architecture Foundation (Task A)
 
 ## Current Structure
 
-- `src/app`: application entry composition and top-level shell orchestration.
-- `src/components/layout`: reusable layout primitives for header, navigation, and workspace regions.
-- `src/features/project`: project-facing UI states, currently the empty project workspace state.
-- `src/core/project-model`: core domain model types for projects, nodes, ports, and connections.
-- `src/styles`: shared styling for the shell and layout.
+- `src/app`: frontend entry composition and top-level shell orchestration.
+- `src/components/layout`: reusable layout primitives (header, navigation, workspace).
+- `src/features/project`: project-facing UI state for the current empty workspace.
+- `src/core/project-model`: foundation TypeScript domain model types for project and graph concepts.
+- `src/services/api`: frontend API client for backend communication.
+- `src/hooks`: frontend hooks for UI-facing behavior (`useBackendHealth`).
+- `src/styles`: shared application shell styling.
+- `backend/app`: FastAPI application and route modules.
+- `backend/tests`: backend automated tests.
 
-## Planned Modules (Not Yet Implemented)
+## Frontend / Backend Boundary
 
-- `src/features/graph`: graph editor interactions and visualization.
-- `src/features/code-editor`: code editing panel integration.
-- `src/features/ai`: AI proposal UX, review, and approval flow.
-- `src/core/node-registry`: reusable built-in and user-defined component definitions.
-- `src/core/validation`: interface and connection validation logic.
-- `src/services`: infrastructure adapters once external services are introduced.
-- `src/hooks` and `src/types`: shared hooks and UI-level type aliases as they become necessary.
+### Frontend responsibilities
 
-## Architecture Direction
+- Render the Forge UI and handle user interactions.
+- Provide the future shell for graph editor, code editor, project management, and AI proposal UX.
+- Display backend connection status to support local development visibility.
+- Call backend endpoints through a reusable API client.
+- Never contain provider API keys or backend secrets.
 
-Forge starts as a modular monolith in a single React + TypeScript application. Core domain types are kept separate from feature UI components so that future graph logic and AI proposal workflows can evolve without coupling domain modeling to presentation.
+### Backend responsibilities
+
+- Provide HTTP API endpoints for Forge.
+- Own future Python code analysis and controlled project operations.
+- Own future provider integrations for AI model access.
+- Own future validation/check execution for proposed modifications.
+- Avoid becoming a dumping ground for unrelated UI logic.
+
+## Task A backend scope
+
+Implemented now:
+
+- FastAPI app entry (`backend/app/main.py`).
+- CORS for local Vite development origins (`http://127.0.0.1:5173`, `http://localhost:5173`).
+- `GET /api/health` endpoint returning service health metadata.
+- Backend health endpoint test using `pytest` and FastAPI `TestClient`.
+
+Not implemented in Task A:
+
+- Graph engine and graph editing APIs.
+- Code-editor integration APIs.
+- AI orchestration/provider calls.
+- Automatic project modification flows.

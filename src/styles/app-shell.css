@@ -38,6 +38,40 @@
   background: #1e3a8a;
 }
 
+
+.status-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.status-connected {
+  color: #bbf7d0;
+  border-color: #15803d;
+  background: #14532d;
+}
+
+.status-loading {
+  color: #bfdbfe;
+  border-color: #1d4ed8;
+  background: #1e3a8a;
+}
+
+.status-error {
+  color: #fecaca;
+  border-color: #b91c1c;
+  background: #7f1d1d;
+}
+
+.status-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  max-width: 360px;
+  text-align: right;
+}
+
 .app-body {
   flex: 1;
   display: grid;
@@ -110,7 +144,41 @@
 }
 
 @media (max-width: 860px) {
-  .app-body {
+  
+.status-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.status-connected {
+  color: #bbf7d0;
+  border-color: #15803d;
+  background: #14532d;
+}
+
+.status-loading {
+  color: #bfdbfe;
+  border-color: #1d4ed8;
+  background: #1e3a8a;
+}
+
+.status-error {
+  color: #fecaca;
+  border-color: #b91c1c;
+  background: #7f1d1d;
+}
+
+.status-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  max-width: 360px;
+  text-align: right;
+}
+
+.app-body {
     grid-template-columns: 1fr;
   }
 
