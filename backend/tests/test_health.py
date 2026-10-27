@@ -1,3 +1,5 @@
+"""Tests for the Forge backend health endpoint."""
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -5,8 +7,8 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_health_endpoint_returns_expected_payload() -> None:
-    response = client.get('/api/health')
+def test_health_endpoint_returns_expected_status_and_body() -> None:
+    response = client.get("/api/health")
 
     assert response.status_code == 200
-    assert response.json() == {'status': 'ok', 'service': 'forge-api'}
+    assert response.json() == {"status": "ok", "service": "forge-api"}

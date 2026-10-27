@@ -6,16 +6,15 @@ interface AppHeaderProps {
   backendErrorMessage: string | null
 }
 
-function getStatusLabel(state: BackendConnectionState): string {
-  if (state === 'connected') {
-    return 'Backend connected'
+function statusLabel(state: BackendConnectionState): string {
+  switch (state) {
+    case 'connected':
+      return 'Backend connected'
+    case 'error':
+      return 'Backend unreachable'
+    default:
+      return 'Checking backend'
   }
-
-  if (state === 'error') {
-    return 'Backend unavailable'
-  }
-
-  return 'Checking backend'
 }
 
 export function AppHeader({
@@ -23,20 +22,21 @@ export function AppHeader({
   backendServiceName,
   backendErrorMessage,
 }: AppHeaderProps) {
-  const statusLabel = getStatusLabel(backendState)
-
   return (
     <header className="app-header">
-      <div>
-        <p className="eyebrow">Forge</p>
-        <h1>Developer workspace</h1>
+      <div className="app-header__brand">
+        <span className="app-header__eyebrow">Forge</span>
+        <h1 className="app-header__title">Developer workspace</h1>
       </div>
-      <div className="status-stack" role="status" aria-live="polite">
-        <p className={`status status-${backendState}`}>{statusLabel}</p>
-        <p className="status-meta">
+
+      <div className="backend-status" role="status" aria-live="polite">
+        <span className={`backend-status__badge backend-status__badge--${backendState}`}>
+          {statusLabel(backendState)}
+        </span>
+        <span className="backend-status__detail">
           {backendServiceName}
           {backendErrorMessage ? ` — ${backendErrorMessage}` : ''}
-        </p>
+        </span>
       </div>
     </header>
   )

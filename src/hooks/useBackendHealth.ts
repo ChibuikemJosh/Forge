@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { fetchBackendHealth, type HealthResponse } from '../services/api/client'
 
+/** Connection states surfaced by the UI. */
 export type BackendConnectionState = 'loading' | 'connected' | 'error'
 
-interface BackendHealthStatus {
+export interface BackendHealthStatus {
   state: BackendConnectionState
   serviceName: string
   errorMessage: string | null
@@ -15,6 +16,12 @@ const initialStatus: BackendHealthStatus = {
   errorMessage: null,
 }
 
+/**
+ * Fetches the backend health endpoint once on mount, using an AbortSignal so
+ * that unmounting (including React StrictMode's double-invoke in development)
+ * does not leave stale state or pointless in-flight requests. No automatic
+ * retries: the UI simply reports the real result.
+ */
 export function useBackendHealth(): BackendHealthStatus {
   const [status, setStatus] = useState<BackendHealthStatus>(initialStatus)
 
@@ -23,14 +30,19 @@ export function useBackendHealth(): BackendHealthStatus {
 
     fetchBackendHealth(controller.signal)
       .then((payload: HealthResponse) => {
-        setStatus({
-          state: payload.status === 'ok' ? 'connected' : 'error',
-          serviceName: payload.service,
-          errorMessage:
-            payload.status === 'ok'
-              ? null
-              : `Unexpected status value: ${payload.status}`,
-        })
+        if (payload.status === 'ok') {
+          setStatus({
+            state: 'connected',
+            serviceName: payload.service,
+            errorMessage: null,
+          })
+        } else {
+          setStatus({
+            state: 'error',
+            serviceName: payload.service,
+            errorMessage: `Unexpected health status: "${payload.status}"`,
+          })
+        }
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') {

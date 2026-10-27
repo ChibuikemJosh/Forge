@@ -7,14 +7,10 @@ import { useBackendHealth } from '../hooks/useBackendHealth'
 import '../styles/app-shell.css'
 
 const initialProject: ForgeProject = {
-  id: 'forge-demo',
-  name: 'Untitled Forge Project',
+  id: 'forge-workspace',
+  name: 'Untitled Forge project',
   language: 'python',
   version: '0.1.0',
-  graph: {
-    nodes: [],
-    connections: [],
-  },
 }
 
 function App() {
@@ -27,7 +23,8 @@ function App() {
         backendServiceName={backendStatus.serviceName}
         backendErrorMessage={backendStatus.errorMessage}
       />
-      <div className="app-body">
+
+      <div className="app-shell__body">
         <NavigationSidebar />
         <WorkspacePanel>
           <EmptyProjectState project={initialProject} />

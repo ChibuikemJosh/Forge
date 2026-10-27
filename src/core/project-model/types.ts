@@ -1,51 +1,17 @@
-export type NodeCategory =
-  | 'function'
-  | 'algorithm'
-  | 'api'
-  | 'database'
-  | 'cache'
-  | 'schema'
-  | 'ui'
-  | 'test'
-  | 'custom'
+/**
+ * Foundation project model.
+ *
+ * Task A deliberately keeps this minimal: these types exist only where the
+ * current UI has a concrete use for them. The full future model (components,
+ * ports, typed connections, source mapping, validation state) is documented in
+ * docs/project-model.md and will be introduced incrementally with its features.
+ */
 
-export interface NodePort {
-  id: string
-  name: string
-  dataType: string
-  required: boolean
-}
-
-export interface ProjectNode {
-  id: string
-  name: string
-  category: NodeCategory
-  description?: string
-  inputs: NodePort[]
-  outputs: NodePort[]
-  implementationPath?: string
-}
-
-export type ConnectionKind = 'data' | 'execution' | 'dependency'
-
-export interface NodeConnection {
-  id: string
-  kind: ConnectionKind
-  sourceNodeId: string
-  sourcePortId?: string
-  targetNodeId: string
-  targetPortId?: string
-}
-
-export interface ProjectGraph {
-  nodes: ProjectNode[]
-  connections: NodeConnection[]
-}
+export type ProjectLanguage = 'python'
 
 export interface ForgeProject {
   id: string
   name: string
-  language: 'python'
+  language: ProjectLanguage
   version: string
-  graph: ProjectGraph
 }

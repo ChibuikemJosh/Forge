@@ -1,113 +1,132 @@
+/* Application shell: header, sidebar, workspace, and empty state. */
+
 .app-shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #0f172a;
+  background: #0b1220;
   color: #e2e8f0;
 }
+
+/* Header */
 
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 1rem 1.5rem;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
   border-bottom: 1px solid #1e293b;
   background: #111827;
 }
 
-.app-header h1 {
-  margin: 0.25rem 0 0;
-  font-size: 1.25rem;
-}
-
-.eyebrow {
-  margin: 0;
+.app-header__eyebrow {
+  display: block;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: #94a3b8;
 }
 
-.status {
-  margin: 0;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  color: #bfdbfe;
-  border: 1px solid #1d4ed8;
-  background: #1e3a8a;
+.app-header__title {
+  margin: 0.2rem 0 0;
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
+/* Backend connection status */
 
-.status-stack {
+.backend-status {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.35rem;
+  gap: 0.3rem;
+  min-width: 0;
 }
 
-.status-connected {
+.backend-status__badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.backend-status__badge--connected {
   color: #bbf7d0;
   border-color: #15803d;
   background: #14532d;
 }
 
-.status-loading {
+.backend-status__badge--loading {
   color: #bfdbfe;
   border-color: #1d4ed8;
   background: #1e3a8a;
 }
 
-.status-error {
+.backend-status__badge--error {
   color: #fecaca;
   border-color: #b91c1c;
   background: #7f1d1d;
 }
 
-.status-meta {
-  margin: 0;
-  font-size: 0.75rem;
+.backend-status__detail {
+  font-size: 0.72rem;
   color: #94a3b8;
   max-width: 360px;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
-.app-body {
+/* Body: sidebar + workspace */
+
+.app-shell__body {
   flex: 1;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 230px minmax(0, 1fr);
 }
 
 .sidebar {
   padding: 1rem;
   border-right: 1px solid #1e293b;
-  background: #0b1220;
+  background: #0f172a;
 }
 
-.sidebar h2 {
+.sidebar__heading {
   margin: 0 0 0.75rem;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
 }
 
-.sidebar ul {
+.sidebar__list {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
-.sidebar li {
+.sidebar__item {
   padding: 0.5rem 0.65rem;
   border-radius: 0.35rem;
   border: 1px solid #243244;
   background: #111b2e;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
 }
 
 .workspace {
   padding: 1.5rem;
 }
+
+/* Empty project state */
 
 .empty-state {
   max-width: 680px;
@@ -117,68 +136,37 @@
   padding: 1.25rem;
 }
 
-.empty-state h2 {
-  margin-top: 0;
+.empty-state__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 
-.empty-state p {
-  margin-bottom: 1rem;
+.empty-state__copy {
+  margin: 0 0 1rem;
   line-height: 1.5;
   color: #cbd5e1;
 }
 
-.empty-state dl {
+.empty-state__meta {
   margin: 0;
   display: grid;
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
 }
 
-.empty-state dt {
+.empty-state__meta dt {
   color: #94a3b8;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 
-.empty-state dd {
+.empty-state__meta dd {
   margin: 0.15rem 0 0;
   font-weight: 600;
 }
 
 @media (max-width: 860px) {
-  
-.status-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-}
-
-.status-connected {
-  color: #bbf7d0;
-  border-color: #15803d;
-  background: #14532d;
-}
-
-.status-loading {
-  color: #bfdbfe;
-  border-color: #1d4ed8;
-  background: #1e3a8a;
-}
-
-.status-error {
-  color: #fecaca;
-  border-color: #b91c1c;
-  background: #7f1d1d;
-}
-
-.status-meta {
-  margin: 0;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  max-width: 360px;
-  text-align: right;
-}
-
-.app-body {
+  .app-shell__body {
     grid-template-columns: 1fr;
   }
 

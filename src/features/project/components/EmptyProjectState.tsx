@@ -6,14 +6,14 @@ interface EmptyProjectStateProps {
 
 export function EmptyProjectState({ project }: EmptyProjectStateProps) {
   return (
-    <section className="empty-state" aria-live="polite">
-      <h2>{project.name}</h2>
-      <p>
-        This workspace is ready for the Forge foundation. Visual graph editing,
-        code-editor integration, and AI-scoped change proposals will be added in
-        future stages.
+    <section className="empty-state">
+      <h2 className="empty-state__title">{project.name}</h2>
+      <p className="empty-state__copy">
+        This workspace is ready for the Forge foundation. The visual graph
+        editor, code-editor integration, validation, and AI-assisted change
+        workflows are planned for future stages.
       </p>
-      <dl>
+      <dl className="empty-state__meta">
         <div>
           <dt>Language focus</dt>
           <dd>{project.language}</dd>
@@ -23,8 +23,8 @@ export function EmptyProjectState({ project }: EmptyProjectStateProps) {
           <dd>{project.version}</dd>
         </div>
         <div>
-          <dt>Graph nodes</dt>
-          <dd>{project.graph.nodes.length}</dd>
+          <dt>Project id</dt>
+          <dd>{project.id}</dd>
         </div>
       </dl>
     </section>

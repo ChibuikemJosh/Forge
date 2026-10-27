@@ -1,3 +1,9 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.local
+
 # Logs
 logs
 *.log
@@ -6,11 +12,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
@@ -23,9 +24,9 @@ dist-ssr
 *.sln
 *.sw?
 
-
-# Python backend
+# Python backend (backend/)
 backend/.venv/
 backend/__pycache__/
 backend/.pytest_cache/
+backend/**/__pycache__/
 backend/**/*.pyc

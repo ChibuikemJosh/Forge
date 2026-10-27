@@ -1,20 +1,25 @@
+"""Forge FastAPI application entry point."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
 
-app = FastAPI(title="Forge API")
-
-allowed_origins = [
+# Local Vite development origins. The Forge frontend runs on these origins
+# during development; any additional (or production) origins must be listed
+# explicitly rather than using a wide-open wildcard default.
+LOCAL_FRONTEND_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5173",
 ]
 
+app = FastAPI(title="Forge API", version="0.1.0")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=LOCAL_FRONTEND_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
