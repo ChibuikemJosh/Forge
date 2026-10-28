@@ -24,9 +24,8 @@ lerna-debug.log*
 *.sln
 *.sw?
 
-# Python backend (backend/)
-backend/.venv/
-backend/__pycache__/
-backend/.pytest_cache/
-backend/**/__pycache__/
-backend/**/*.pyc
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
