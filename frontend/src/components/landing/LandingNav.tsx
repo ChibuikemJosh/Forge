@@ -16,9 +16,9 @@ export function LandingNav() {
             </a>
           ))}
         </nav>
-        <a href="#workflow" className="ml-auto rounded-sm bg-zinc-100 px-3.5 py-2 text-[14px] font-bold text-zinc-950 hover:bg-white focus-visible:outline-2 focus-visible:outline-ember sm:ml-0">
+        <Link to="/workspace" className="ml-auto rounded-sm bg-zinc-100 px-3.5 py-2 text-[14px] font-bold text-zinc-950 hover:bg-white focus-visible:outline-2 focus-visible:outline-ember sm:ml-0">
           Open workspace
-        </a>
+        </Link>
       </div>
     </header>
   );

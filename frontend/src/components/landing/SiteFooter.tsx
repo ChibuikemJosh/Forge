@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { Link } from "react-router-dom";
 import { Reveal } from "./Reveal";
 
 export function ClosingSection() {
@@ -11,14 +12,15 @@ export function ClosingSection() {
           </h2>
           <p className="mt-3 text-[17px] text-zinc-300">See the shape of your system — and keep AI on a leash you hold.</p>
         </Reveal>
-        <motion.a
-          href="#workflow"
+        <motion.div
           className="rounded-sm bg-ember px-6 py-3.5 text-[15px] font-bold text-white hover:bg-ember-soft focus-visible:outline-2 focus-visible:outline-white"
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.98 }}
         >
+          <Link to="/workspace" className="rounded-sm bg-ember px-6 py-3.5 text-[15px] font-bold text-white hover:bg-ember-soft focus-visible:outline-2 focus-visible:outline-white">
           Try the workflow ↑
-        </motion.a>
+          </Link>
+        </motion.div>
       </div>
     </section>
   );

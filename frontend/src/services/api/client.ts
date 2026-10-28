@@ -10,6 +10,8 @@ export interface HealthResponse {
   service: string
 }
 
+import type { Graph, GraphPreviewResponse, ValidationResult } from '../../features/graph/types'
+
 const DEFAULT_API_BASE_URL = 'http://127.0.0.1:8000'
 
 function resolveApiBaseUrl(): string {
@@ -54,4 +56,20 @@ export async function fetchBackendHealth(
   signal?: AbortSignal,
 ): Promise<HealthResponse> {
   return requestJson<HealthResponse>('/api/health', { signal })
+}
+
+export async function validateGraph(graph: Graph): Promise<ValidationResult> {
+  return requestJson<ValidationResult>('/api/graph/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(graph),
+  })
+}
+
+export async function previewGraph(graph: Graph): Promise<GraphPreviewResponse> {
+  return requestJson<GraphPreviewResponse>('/api/graph/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(graph),
+  })
 }

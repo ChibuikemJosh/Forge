@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.routers.graph import router as graph_router
 
 # Local Vite development origins. The Forge frontend runs on these origins
 # during development; any additional (or production) origins must be listed
@@ -19,8 +20,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=LOCAL_FRONTEND_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
 app.include_router(health_router)
+app.include_router(graph_router)
