@@ -1,1 +1,70 @@
 @import "tailwindcss";
+
+@theme {
+  /* Petrona is the Forge body typeface. Instrument Sans is the thin
+     display face for the hero. JetBrains Mono is for code and labels. */
+  --font-sans: "Petrona", Georgia, "Times New Roman", serif;
+  --font-display: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Deep burnt ember — fills/buttons. Bright is only for tiny mono labels
+     and the live edge, where the deep tone would vanish on near-black. */
+  --color-ember: #c2410c;
+  --color-ember-soft: #e05a10;
+  --color-ember-bright: #ff7a29;
+  --color-ember-deep: #7c2d12;
+  --color-coal: #0b0b0c;
+  --color-panel: #131315;
+  --color-panel-2: #1a1a1d;
+  --color-line: #262629;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-coal);
+  color: #f4f4f5;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #c2410c;
+  color: #fff;
+}
+
+/* React Flow (@xyflow/react) dark chrome to match the Forge panels. */
+.react-flow__controls {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.react-flow__controls-button {
+  background: #1a1a1d;
+  border-bottom: 1px solid #262629;
+  fill: #d4d4d8;
+}
+.react-flow__controls-button:hover {
+  background: #262629;
+}
+.react-flow__attribution {
+  background: transparent;
+  color: #52525b;
+}
+.react-flow__edge:focus-visible,
+.react-flow__node:focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
