@@ -1,72 +1,66 @@
-# Forge Architecture
+# Forge Guard Architecture
 
-## Repository boundaries
+## Boundaries
 
-Forge is a modular monolith with two independently run application parts:
+Forge Guard remains a modular monolith:
 
 ```text
-frontend/   React + TypeScript + Vite UI
-backend/    FastAPI API and graph services
-docs/       Architecture and model documentation
+frontend/   React presentation and graph visualisation
+backend/    FastAPI contracts, controlled example, analysis, verification
+docs/       Shared architecture and workflow documentation
 ```
 
-The frontend owns presentation, local workspace state, and API calls. The
-backend owns the authoritative graph contract, validation, dependency
-resolution, Python generation, and syntax validation. The frontend never
-generates authoritative Python or duplicates the backend validation rules.
+The backend is authoritative for analysis status, findings, graph evidence,
+fix-proposal status, and verification results. The frontend renders returned
+data and must not infer that a missing UI node proves a source vulnerability.
 
 ## Backend modules
 
-- `backend/app/main.py` creates the FastAPI application, configures local CORS,
-  and mounts routers.
-- `backend/app/api/health.py` owns `GET /api/health`.
-- `backend/app/api/routers/graph.py` owns graph HTTP endpoints only.
-- `backend/app/schemas/graph.py` defines typed request and response models.
-- `backend/app/services/graph_validation.py` validates graph identity,
-  interfaces, supported relationships, and dependency structure.
-- `backend/app/services/code_generation.py` turns a valid graph into stable
-  Python and validates its syntax without executing it.
+- `backend/app/main.py` configures FastAPI and mounts routers.
+- `backend/app/security_demo.py` contains the isolated vulnerable/corrected
+  order endpoint and in-memory fixtures.
+- `backend/app/schemas/security.py` defines shared findings, evidence, graph,
+  proposal, and verification objects.
+- `backend/app/services/security_analysis.py` performs deterministic AST
+  analysis of the controlled example and builds semantic graph data.
+- `backend/app/services/security_verification.py` executes the controlled
+  endpoint checks and records actual outcomes.
+- `backend/app/api/routers/security.py` exposes the minimum analysis contract.
 
-There is no database, cache, project persistence, or model provider in this
-deliverable.
+The earlier Function graph contract and `/api/graph/*` endpoints remain
+available for the existing graph-to-Python demonstration.
 
-## Graph as source of truth
+## Source-of-truth decision
 
-For supported graphs, Function node configuration is the source of truth for
-function names, parameters, defaults, and return types. A `calls` edge points
-from caller to callee. The generator must reject the entire graph if any
-unsupported or inconsistent relationship is present; it never silently drops
-edges.
+Forge Guard uses a controlled code-first approach for this MVP. The detector
+inspects the actual source of the controlled FastAPI functions using Python's
+standard `ast` module. It checks for:
 
-## Preview-before-write
+1. authentication through `_authenticate_customer`;
+2. order retrieval through the in-memory order collection;
+3. an ownership comparison involving `order.owner_id` and the authenticated
+   customer before return.
 
-`POST /api/graph/preview` validates and generates code in memory. It does not
-write project files. This keeps the developer in control and leaves room for a
-future change manager to produce a reviewable diff before any approved write.
+The graph is derived from those observed source facts. It is not treated as
+proof independently of source analysis.
 
-## Deferred controlled AI workflow
+## Agents and tools
 
-Future AI work should gather bounded graph and source context, request
-structured operations, validate the proposal, produce a draft and diff, require
-explicit approval, then apply and test approved changes. No agent sessions,
-Meta Model API, automatic modification, or approval endpoint is implemented
-yet.
+Agents make bounded decisions and coordinate workflows. Tools expose explicit
+capabilities. This backend provides analysis and verification tool contracts;
+it does not implement Ram's orchestrator or Bisal's Meta model client.
 
-## Future endpoints
+The backend returns a review-only `FixProposal`. Applying a proposal requires a
+future human-review and controlled patch boundary; no file is modified by the
+current endpoints.
 
-The following are planned, not placeholders:
+## Deferred work
 
-- `GET /api/projects/{project_id}/graph`
-- `POST /api/agent/sessions`
-- `POST /api/agent/sessions/{session_id}/messages`
-- `GET /api/changes/{change_id}/diff`
-- `POST /api/changes/{change_id}/apply`
-- `POST /api/changes/{change_id}/validate`
-
-## Frontend experiences
-
-The landing page at `/` is preserved as the product introduction and includes
-a non-editable React Flow project preview. The `/workspace` route is a separate,
-small demonstration of the graph-to-Python API contract. React Flow is already
-used by the project; Monaco and an editable graph authoring experience remain
-future work.
+- General FastAPI/Python project analysis
+- Additional vulnerability categories
+- Meta model integration
+- Agent orchestration
+- Human approval and patch application
+- Persistence and project loading
+- Production authentication
+- Full graph visualiser integration
