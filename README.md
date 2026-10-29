@@ -1,28 +1,30 @@
-# Forge
+# Forge Guard
 
-Forge is an early-stage developer environment that pairs source-code work with
-a visual representation of real software components. Deliverable 1 provides a
-small, working graph-to-Python workflow for two connected Function nodes.
+Forge Guard is an early-stage graph based security analysis tool for
+AI-assisted Python backend development. Its MVP detects one business-logic
+authorization problem: an authenticated customer retrieving another
+customer's order.
 
 ## Current implementation
 
-- React + TypeScript + Vite landing page preserved at `/`.
-- Separate graph workspace at `/workspace`.
-- FastAPI backend with health, graph validation, and Python preview endpoints.
-- Pydantic graph contract with Function nodes and `calls` edges.
-- Deterministic Python generation with standard-library syntax validation.
-- Backend tests for graph invariants, generation, API behavior, and health.
+- Preserved React + TypeScript + Vite landing page at `/`.
+- Existing graph-to-Python workspace at `/workspace`.
+- Controlled FastAPI vulnerable and corrected order example.
+- Deterministic AST-based ownership analysis for that controlled example.
+- Structured security findings, evidence, semantic graph data, fix proposals,
+  and verification results.
+- FastAPI endpoints for analysis and the stable order-ownership rule.
+- Backend tests covering vulnerable and corrected behavior.
 
-The graph preview does not write files. AI integration, source synchronization,
-approval workflows, persistence, databases, Redis, and Monaco are intentionally
-deferred.
+The analysis is deliberately narrow. It is not a general Python security
+scanner and does not claim coverage of arbitrary FastAPI projects.
 
 ## Repository layout
 
 ```text
-frontend/   React, TypeScript, Vite application
-backend/    FastAPI application, graph services, and pytest tests
-docs/       Architecture, project model, and graph-to-code documentation
+frontend/   React, TypeScript, Vite application and visualiser
+backend/    FastAPI application, security models, services, and tests
+docs/       Architecture, project model, graph-to-code, and security docs
 ```
 
 ## Prerequisites
@@ -40,66 +42,80 @@ npm install
 npm run dev
 ```
 
-The development server runs at `http://localhost:5173`. The frontend uses
+The landing page runs at `http://localhost:5173`. The frontend uses
 `VITE_API_BASE_URL` when set and otherwise calls
-`http://127.0.0.1:8000`. Copy `frontend/.env.example` to `frontend/.env.local`
-to override it.
-
-Useful checks:
+`http://127.0.0.1:8000`. Copy `frontend/.env.example` to
+`frontend/.env.local` to override it.
 
 ```powershell
 npm run lint
 npm run build
-npm run preview
 ```
 
 ## Run the backend
 
-From `backend/`, create and activate a virtual environment:
+From `backend/`:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
-```
-
-Start FastAPI:
-
-```powershell
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Run backend tests from `backend/`:
+Run tests:
 
 ```powershell
 pytest
 ```
 
-## Graph-to-Python workflow
+## Forge Guard demo
 
-The workspace submits a graph containing `find_products` and
-`search_products`. The `calls` edge points from caller to callee:
+The controlled demo uses in-memory orders and an `x-customer-id` header as
+minimal authentication input. It has two reproducible states:
 
 ```text
-find_products ──calls──> search_products
+GET /api/demo/vulnerable/orders/order-bob
+GET /api/demo/corrected/orders/order-bob
 ```
 
-The backend validates the complete graph, resolves a stable dependency order,
-generates both functions, and checks the result with `ast.parse()` before
-returning a preview. The unimplemented leaf function raises
-`NotImplementedError`; Forge does not invent an algorithm.
+With `x-customer-id: customer-alice`, the vulnerable route returns Bob's order
+while the corrected route returns HTTP 403. No real customer data or
+production authentication infrastructure is involved.
 
-See [docs/graph-to-code.md](docs/graph-to-code.md) for the contract and
-supported patterns.
+Analyze the vulnerable state:
 
-## Limitations and planned work
+```powershell
+curl -X POST http://127.0.0.1:8000/api/security/analyze
+```
 
-The initial generator supports only Function nodes, Python-compatible simple
-type names, acyclic graphs, and at most one `calls` edge per caller. Caller and
-callee parameters must match by name and type. Other relationship types,
-editable graph construction, project persistence, source mapping, AI proposals,
-change approval, and code editing are future work.
+Analyze the corrected state:
 
-See [docs/architecture.md](docs/architecture.md) and
-[docs/project-model.md](docs/project-model.md) for the architectural direction.
+```powershell
+curl -X POST "http://127.0.0.1:8000/api/security/analyze?corrected=true"
+```
+
+The response contains the stable rule, evidence-backed finding (when present),
+semantic graph, review-only remediation proposal, and an executed verification
+result. The proposal is not applied automatically.
+
+See [docs/security-analysis.md](docs/security-analysis.md) for the contract and
+limitations.
+
+## Existing graph-to-Python workflow
+
+The `/workspace` route still demonstrates the original deterministic graph
+workflow for two Function nodes. It is preserved separately from Forge Guard's
+security graph and is documented in [docs/graph-to-code.md](docs/graph-to-code.md).
+
+## Agent and tool boundaries
+
+- Ram owns orchestration and the future agentic review loop.
+- Bisal owns the reusable Meta model tool.
+- Kenny owns the React graph visualiser and workspace UI.
+- This backend owns the controlled example, security schemas, deterministic
+  analysis, graph construction, and verification contracts.
+
+No Meta model client, autonomous code modification, approval workflow,
+database, Redis, or production authentication infrastructure is implemented.
