@@ -71,12 +71,18 @@ verification result. The default executes verification.
 The response contains:
 
 - `rule`: stable rule definition;
+- `outcome`: `confirmed`, `satisfied`, `inconclusive`, or `failed`;
 - `finding`: a high-severity finding for the vulnerable state, otherwise
   `null`;
 - `graph`: evidence-derived semantic graph;
 - `fix_proposal`: review-pending remediation explanation, otherwise `null`;
 - `verification`: whether the actual controlled request behaved as expected;
 - `status`: `completed` or `failed`; `error` carries the reason when failed.
+
+`status` describes whether the analysis operation ran. `outcome` carries the
+security conclusion so a completed analysis is not confused with a confirmed
+vulnerability. A behavior mismatch produces `inconclusive`; an analysis
+exception produces `failed` with no finding or verification.
 
 Analysis is never reported as completed when the analyzer could not run. If
 analysis raises, the endpoint returns `status=failed` with no finding, fix
@@ -116,6 +122,21 @@ order owned by another customer; the corrected route returns HTTP 403.
 This is a deterministic controlled-example detector, not a general-purpose
 static analyzer. It supports only the known function patterns in
 `security_demo.py`, one ownership rule, and in-memory order fixtures.
+
+## Controlled fix workflow
+
+The known finding produces a deterministic review proposal for
+`backend/app/security_demo.py`. A human must approve it through the review
+endpoint before application. The service checks the expected file path, full
+source hash, and exact vulnerable-function content before replacing it
+atomically. It then runs the existing controlled HTTP security verification.
+
+Proposal review, application, and verification are separate states. A failed
+verification remains failed and exposes its result; it is never promoted to
+verified. A rollback endpoint restores the exact content captured before the
+application, unless the file changed afterward. The implementation does not
+apply arbitrary scripts, access arbitrary repository paths, or claim AI
+generation.
 
 The remediation is a structured review proposal, not an applied patch. No
 Meta model output is treated as evidence, and no generated or proposed code is
