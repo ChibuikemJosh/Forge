@@ -160,7 +160,11 @@ class FixProposal(BaseModel):
 
 
 class SecurityAnalysisResponse(BaseModel):
-    """Complete result returned by the MVP analysis endpoint."""
+    """Complete result returned by the MVP analysis endpoint.
+
+    ``error`` carries a human-readable failure reason when ``status`` is
+    ``failed``; it is ``None`` for a completed analysis.
+    """
 
     analysis_id: str
     project_id: str
@@ -170,3 +174,4 @@ class SecurityAnalysisResponse(BaseModel):
     graph: SecurityGraph
     fix_proposal: FixProposal | None = None
     verification: VerificationResult | None = None
+    error: str | None = None
