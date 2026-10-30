@@ -35,8 +35,10 @@ honest, not a bug.
 React 19 · TypeScript (strict, bundler resolution) · Vite 8 · Tailwind
 CSS 4 (via `@tailwindcss/vite`, CSS-first config in `src/index.css`) ·
 React Router 7 (`react-router-dom`) · **React Flow `@xyflow/react` 12**
-for node graphs · **Motion (`motion`)** for animation · oxlint for linting. No other UI/animation/icon
-libraries are installed — do not add one without a concrete need.
+for node graphs · **Motion (`motion`)** for animation · **Shiki** (lazy, Python only)
+for code highlighting · **sonner** for toasts · **canvas-confetti** (single 403 moment,
+reduced-motion gated) · **@dagrejs/dagre** for security-graph layout · oxlint for linting.
+No other UI/animation/icon libraries — do not add one without a concrete need.
 
 ## Project structure
 
@@ -151,102 +153,60 @@ src/
 
 ## Workspace page (`/workspace`) — graphical interface specs
 
-VS Code-style IDE around the project graph. Mock data only for now — no
-backend calls from this page (the landing `BackendPill` remains the only
-live health UI). Do not touch `../backend/` for workspace work.
+VS Code-style IDE around the project graph. The workspace has two modes,
+toggled in `TitleBar` (**Security flow** default, Overview secondary):
+
+- **Security flow** — backed by the real `/api/security/*` and `/api/demo/*`
+  endpoints via `services/api/client.ts` → `hooks/useSecurityWorkflow.ts` →
+  props. No component calls `fetch` directly.
+- **Overview** — the existing layer/file overview with its mock `data.ts`
+  (`GraphCanvas`, `FileExplorer`, `InspectorPanel`, `BottomPanel`). Mock
+  data only in this mode.
+
+### Security flow files
 
 ```
-src/pages/Workspace.tsx            # Composition + all panel/drill state. Default export.
-src/components/workspace/          # Every workspace widget lives here (one per file)
-├── data.ts                        # ALL mock data + types: PROJECT, LAYERS, LAYER_EDGES,
-│                                  #   FILES (+FILE_BY_ID/LAYER_BY_ID/filesInLayer), FINDINGS,
-│                                  #   TEST_RESULTS, TERMINAL_LINES, FILE_TREE. No JSX.
-├── TitleBar.tsx                   # No macOS traffic lights. FORGE→/, menu, centred search,
-│                                  #   layout toggles (left ▥ / bottom ▤ / right ▦, aria-pressed)
-├── ResizeHandle.tsx               # VS Code sash: role=separator, pointer-drag (window
-│                                  #   listeners + body cursor) and Arrow-key resize (±8/24px)
-├── ActivityBar.tsx                # 48px rail: Explorer/Search toggle the left sidebar;
-│                                  #   Git badge, Run, Extensions, avatar/Settings footer
-├── FileExplorer.tsx               # Explorer: findings filter, FILE_TREE (folders collapsed
-│                                  #   per-row), coloured kinds (folder=--color-folder,
-│                                  #   py=--color-py-blue, md/config tokens), critical-finding
-│                                  #   badge, Outline/Timeline footer. File click → drill+select.
-├── GraphCanvas.tsx                # React Flow centre. Two levels only (see below).
-├── GraphNode.tsx                  # memo custom node `graph`: variant layer|file, Handle
-│                                  #   top(target)/bottom(source), complexity colour, dimmed prop
-├── InspectorPanel.tsx             # Right sidebar tabs: FINDINGS (severity cards, click →
-│                                  #   select file) + REMEDIATION diff (−/+ lines, Apply fix
-│                                  #   is mock state only, never writes) | INSPECTOR (file meta,
-│                                  #   imports list, Clear selection)
-├── BottomPanel.tsx                # Panel tabs Problems|Tests & Verification|Terminal|Output;
-│                                  #   ✕ closes. Tests = mock pytest table.
-└── StatusBar.tsx                  # branch, error/warning counts, layer›file breadcrumb,
-                                   #   test summary, Python/framework, on ember-deep
+src/features/security/
+├── types.ts              # Mirrors backend/app/schemas/security.py exactly
+├── layout.ts             # @dagrejs/dagre TB auto-layout (backend sends no positions)
+├── applyUnifiedDiff.ts   # Tiny unified-diff hunk applier for the After view
+├── sourceOutline.ts      # Symbol outline derived by scanning the snapshot
+└── demoSource.ts         # `?raw` build-time import of backend/app/security_demo.py + SHA-256
+src/hooks/useSecurityWorkflow.ts  # useReducer machine: idle → exploited → analyzing →
+                                  # confirmed → reviewing → approved → applying → applied →
+                                  # reanalyzing → fixed_in_source | resolved (+ error).
+                                  # `resolved` only when backend outcome === "satisfied".
+src/components/workspace/security/
+├── SecurityStepper.tsx   # Exploit·Scan·Understand·Review·Apply·Prove, layoutId pill
+├── SecurityExplorer.tsx  # Real scanned file + symbol outline (no backend call)
+├── SecurityFlowCanvas.tsx# React Flow canvas (Controls/MiniMap/dotted Background)
+├── SecurityNode.tsx      # memo node, typed NodeProps, finding pulse (reduced-motion off)
+├── AttackEdge.tsx        # Bezier edge + SVG animateMotion attack particle
+├── CodeViewer.tsx        # Read-only viewer: hash check, highlight, Before/After
+├── ShikiLines.tsx        # Lazy Shiki (shiki/core + JS engine + Python + github-dark)
+├── DiffViewer.tsx        # Unified diff with −/+ gutters
+├── DiffCompare.tsx       # Modal: side-by-side original vs proposed fix + unified diff
+├── SecurityInspector.tsx # Right panel = current step (rule card pinned, outcome badge)
+└── SecurityBottomPanel.tsx # Exploit | Verification | Output (API call log)
 ```
 
-Layout contract (mirrors the VS Code reference, rounded widget sections):
+Truthfulness rules: outcome badge shows the backend value verbatim
+(`inconclusive` after apply gets helper text, never relabelled `satisfied`);
+apply verification is labelled "Reference verification"; proposal state is
+resumed via `GET /api/security/proposals/{id}` on analyze (keep the last
+`proposal_id` — post-fix analyses return `fix_proposal: null`); 404 on
+apply/rollback shows the backend-restarted message; replay animation outcome
+is driven by the real HTTP status, never the step number. Exactly one ember
+primary button is visible at a time.
 
-- Shell is `h-screen flex-col gap-1.5 p-1.5 bg-ide-bg`; every widget
-  (title bar, activity rail, sidebars, graph, bottom panel, status bar) is
-  its own `rounded-lg border border-line` panel separated by the gap — not
-  one flush window.
-- Left sidebar and right sidebar toggle independently from the title-bar
-  layout buttons (and Explorer/Search on the activity rail opens the left).
-- Bottom panel is hidden by default; toggled by title-bar ▤ or its own ✕.
-- **Resizable (VS Code sashes):** panel sizes are `useState` in
-  `Workspace.tsx` — left `240px [180–420]`, right `320px [240–560]`,
-  bottom `224px [120–520]` — clamped via `clamp()`. Sidebars/bottom render
-  `h-full w-full` inside a sized wrapper `<div style={{width|height}}>`;
-  the `ResizeHandle` between panels reports incremental deltas (right and
-  bottom invert the sign). Dragging must keep working outside the handle
-  (window `pointermove`/`pointerup`, `userSelect:none` while dragging).
-- Explorer scroll area uses `.workspace-scroll` (`index.css`): thumb-only
-  scrollbar, `::-webkit-scrollbar-track/corner` fully transparent — never
-  re-add a white/grey track background.
-- Dark theme only for now. IDE chrome uses `--font-ui` (Instrument Sans);
-  Petrona stays landing-only. Code/paths/counts use `--font-mono`.
-  Workspace-only colours are `--color-ide-*`, `--color-folder`,
-  `--color-py-*`, `--color-sev-*`, `--color-test-pass` tokens in
-  `index.css` — no hardcoded hex in JSX (React Flow edge styles excepted).
+The scanned file is loaded at build time
+(`import demoSource from '../../../../backend/app/security_demo.py?raw'`);
+`vite.config.ts` sets `server.fs.allow: ['..']`. SHA-256 of the snapshot is
+compared with `fix_proposal.expected_source_hash` in the code viewer.
 
-Graph contract (React Flow, refs: overview + drilled screenshots):
-
-- **Edges are curved, never linear/angular:** every edge uses
-  `type: "default"` (React Flow bezier) — no `smoothstep`/`step`/`straight`
-  in the workspace graph. Overview edges are solid ember-brown (`#8a6d4b`
-  in edge style objects only); drilled edges stay dashed.
-- **Level 0 — Project Overview:** one `LAYER` node per `LAYERS` entry
-  (name, desc, `simple|moderate|complex`, file count), `LAYER_EDGES` with
-  numeric count labels. Clicking a layer node drills in.
-- **Level 1 — Layer (container):** files sit inside one transparent
-  container — a `type:"group"` parent node (`layer-container`,
-  `rgba(255,255,255,0.02)` fill, `1px #343438` border, radius 12,
-  non-draggable/selectable) with a muted mono title child
-  (`layer-container-title`). File nodes use `parentId:"layer-container"`
-  + `extent:"parent"` and positions relative to the container.
-  Dashed curved `imports` edges for intra-layer imports only; cross-layer
-  import count is summarised in the floating footer pill. Clicking a file
-  selects it (selected file + direct neighbours stay full opacity, rest
-  `dimmed`) and opens the right sidebar Inspector. Node clicks ignore
-  non-`graph` nodes (container/title).
-- **Returning:** a drilled view always shows an ember `← Back` button
-  (top-left, `aria-label="Back to Project Overview (previous layer)"`)
-  next to the breadcrumb pill `Project › LAYER NAME (Esc to go back)`.
-  Back button, `Escape`, breadcrumb Project, or re-drill all reset
-  selection. `key` on `<ReactFlow>` is the layer id so each level gets a
-  fresh `fitView`.
-- Zoom/pan enabled (landing preview rules do NOT apply here): `Controls`
-  bottom-left, `MiniMap` bottom-right, dotted `Background`, `minZoom
-  0.25 / maxZoom 2.2`, `nodesConnectable={false}`.
-- State lives in `Workspace.tsx` (`useState`): `layerId`, `selectedFileId`,
-  `selectedFindingId`, `applied:Set<string>`, panel booleans. Explorer,
-  findings, problems and graph all sync through `selectFile`/`selectFinding`.
-
-Mock Python project: **`orders-api`** (FastAPI, Python 3.12, pytest) —
-`app/{api,schemas,services,db,core}` + `tests/`, see `FILE_TREE`/`FILES`.
-When a real analyser lands, it must produce the same `data.ts` shapes
-(`LayerMeta`/`FileMeta.imports: string[]`/`Finding`/`TestResult`) from the
-backend (source of truth) — components keep taking props, never `fetch`.
+Overview-mode layout/graph contracts (panels, sashes, layer drill-down,
+curved `default` edges only) are unchanged from the original spec — see
+`data.ts`, `GraphCanvas.tsx` and git history for the full contract.
 
 ## Before you finish
 
