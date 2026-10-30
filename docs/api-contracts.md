@@ -315,3 +315,7 @@ Defined in `backend/app/schemas/graph.py` (existing, preserved):
 No Meta model client, autonomous code modification, approval workflow,
 database, Redis, or production authentication infrastructure is implemented.
 
+
+## SourceGraph
+
+See `docs/source-graph.md` for the SourceGraph endpoint and frontend contract.
