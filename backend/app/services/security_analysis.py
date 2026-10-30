@@ -7,6 +7,7 @@ import textwrap
 from app.schemas.security import (
     AnalysisEvidence,
     AnalysisStatus,
+    Confidence,
     SecurityFinding,
     SecurityGraph,
     SecurityGraphEdge,
@@ -36,15 +37,10 @@ def analyze_demo_state(corrected: bool) -> tuple[SecurityFinding | None, Securit
 
 
 def build_fix_proposal(finding: SecurityFinding | None) -> FixProposal | None:
-    """Create a review-only remediation suggestion for a detected finding."""
-    if finding is None:
-        return None
-    return FixProposal(
-        proposal_id="proposal-order-ownership-001",
-        finding_id=finding.finding_id,
-        file_path=finding.source.file_path,
-        explanation="Add an ownership comparison after order retrieval and reject a non-owner with HTTP 403.",
-    )
+    """Backward-compatible entry point for the dedicated fix service."""
+    from app.services.security_fixes import build_fix_proposal as create_proposal
+
+    return create_proposal(finding, source_context=None)
 
 
 def _function_for_state(corrected: bool):
@@ -71,12 +67,11 @@ def _collect_evidence(
     function_node: ast.FunctionDef,
     source_reference: SourceReference,
 ) -> AnalysisEvidence:
-    calls = [
-        node
-        for node in ast.walk(function_node)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-    ]
-    retrieves_order = any(call.func.attr == "get" for call in calls)
+    calls = [node for node in ast.walk(function_node) if isinstance(node, ast.Call)]
+    retrieves_order = any(
+        isinstance(call.func, ast.Attribute) and call.func.attr == "get"
+        for call in calls
+    )
     authenticated_customer = any(
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
@@ -99,6 +94,14 @@ def _collect_evidence(
         checks_order_ownership=ownership_expression is not None,
         ownership_expression=ownership_expression,
         source=source_reference,
+        explanation=(
+            "The function authenticates a customer and retrieves an order, "
+            + (
+                "then compares the order owner with the authenticated customer."
+                if ownership_expression is not None
+                else "but returns the order without comparing its owner."
+            )
+        ),
     )
 
 
@@ -107,7 +110,15 @@ def _build_finding(
     source_reference: SourceReference,
     corrected: bool,
 ) -> SecurityFinding | None:
-    if corrected or not (evidence.authenticated_customer and evidence.retrieves_order):
+    if (
+        corrected
+        or source_reference.symbol != "vulnerable_get_order"
+        or not (
+            evidence.authenticated_customer
+            and evidence.retrieves_order
+            and not evidence.checks_order_ownership
+        )
+    ):
         return None
     return SecurityFinding(
         finding_id="finding-order-ownership-001",
@@ -120,6 +131,9 @@ def _build_finding(
         evidence=evidence,
         impact="One authenticated customer can read another customer's order.",
         suggested_remediation="Compare the authenticated customer ID with order.owner_id and return HTTP 403 when they differ.",
+        severity_rationale="An authenticated customer can read another customer's order data, so confidentiality is directly affected.",
+        confidence=Confidence.HIGH,
+        confidence_rationale="The controlled endpoint source and its demonstrated response behavior both establish the missing authorization check.",
         analysis_status=AnalysisStatus.COMPLETED,
     )
 
@@ -133,6 +147,12 @@ def _build_graph(
     nodes = [
         SecurityGraphNode(id="request", type="request", label="Order request"),
         SecurityGraphNode(
+            id="customer",
+            type="authenticated_customer",
+            label="Authenticated customer",
+            source=source_reference,
+        ),
+        SecurityGraphNode(
             id="authenticate",
             type="authentication",
             label="Authenticate customer",
@@ -144,19 +164,37 @@ def _build_graph(
             label="Retrieve order",
             source=source_reference,
         ),
+        SecurityGraphNode(
+            id="order",
+            type="order",
+            label="Retrieved order",
+            source=source_reference,
+        ),
     ]
     edges = [
         SecurityGraphEdge(
             id="request-authenticate",
             source="request",
-            target="authenticate",
+            target="customer",
             relationship="authenticates",
+        ),
+        SecurityGraphEdge(
+            id="customer-authenticate",
+            source="customer",
+            target="authenticate",
+            relationship="provides_identity",
         ),
         SecurityGraphEdge(
             id="authenticate-retrieve",
             source="authenticate",
             target="retrieve",
             relationship="retrieves",
+        ),
+        SecurityGraphEdge(
+            id="retrieve-order",
+            source="retrieve",
+            target="order",
+            relationship="returns",
         ),
     ]
     if evidence.checks_order_ownership:
@@ -180,7 +218,7 @@ def _build_graph(
             [
                 SecurityGraphEdge(
                     id="retrieve-ownership",
-                    source="retrieve",
+                    source="order",
                     target="ownership",
                     relationship="authorizes",
                 ),
@@ -204,10 +242,29 @@ def _build_graph(
         )
         edges.append(
             SecurityGraphEdge(
-                id="retrieve-response",
-                source="retrieve",
+                id="order-response",
+                source="order",
                 target="response",
                 relationship="exposes",
+                finding_ids=finding_ids,
+            )
+        )
+    if finding:
+        nodes.append(
+            SecurityGraphNode(
+                id="finding-order-ownership-001",
+                type="security_finding",
+                label="Order ownership vulnerability",
+                source=source_reference,
+                finding_ids=finding_ids,
+            )
+        )
+        edges.append(
+            SecurityGraphEdge(
+                id="response-finding-order-ownership-001",
+                source="response",
+                target="finding-order-ownership-001",
+                relationship="violates",
                 finding_ids=finding_ids,
             )
         )
