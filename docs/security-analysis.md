@@ -75,7 +75,25 @@ The response contains:
   `null`;
 - `graph`: evidence-derived semantic graph;
 - `fix_proposal`: review-pending remediation explanation, otherwise `null`;
-- `verification`: whether the actual controlled request behaved as expected.
+- `verification`: whether the actual controlled request behaved as expected;
+- `status`: `completed` or `failed`; `error` carries the reason when failed.
+
+Analysis is never reported as completed when the analyzer could not run. If
+analysis raises, the endpoint returns `status=failed` with no finding, fix
+proposal, or verification, and an `error` message.
+
+### Verification semantics
+
+`VerificationResult` always records the actual outcome:
+
+- `executed=true` and `passed=true` only when the request ran and matched the
+  expected status;
+- `executed=true` and `passed=false` with `status=failed` when the behavior did
+  not match (a real failed verification is reported as failed, never passed);
+- `executed=false` with `status=failed` and a non-null `error` when verification
+  itself could not run.
+
+No verification result is ever fabricated as passed.
 
 ### Rule
 

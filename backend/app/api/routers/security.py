@@ -1,8 +1,12 @@
 """Forge Guard security-analysis endpoints for the controlled demo."""
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query
 
-from app.schemas.security import SecurityAnalysisResponse
+from app.schemas.security import (
+    AnalysisStatus,
+    SecurityAnalysisResponse,
+    SecurityGraph,
+)
 from app.services.security_analysis import (
     ORDER_OWNERSHIP_RULE,
     analyze_demo_state,
@@ -19,7 +23,20 @@ def analyze_security_demo(
     verify: bool = Query(default=True),
 ) -> SecurityAnalysisResponse:
     """Analyze the controlled vulnerable or corrected demo state."""
-    finding, graph = analyze_demo_state(corrected)
+    analysis_id = f"analysis-order-ownership-{'corrected' if corrected else 'vulnerable'}"
+    try:
+        finding, graph = analyze_demo_state(corrected)
+    except Exception as error:
+        return SecurityAnalysisResponse(
+            analysis_id=analysis_id,
+            project_id="controlled-fastapi-order-demo",
+            status=AnalysisStatus.FAILED,
+            rule=ORDER_OWNERSHIP_RULE,
+            finding=None,
+            graph=SecurityGraph(nodes=[], edges=[]),
+            error=f"Analysis failed: {error}",
+        )
+
     fix_proposal = build_fix_proposal(finding)
     verification = None
     if verify:
@@ -28,9 +45,9 @@ def analyze_security_demo(
         if finding:
             finding.verification_status = verification.status
     return SecurityAnalysisResponse(
-        analysis_id=f"analysis-order-ownership-{'corrected' if corrected else 'vulnerable'}",
+        analysis_id=analysis_id,
         project_id="controlled-fastapi-order-demo",
-        status="completed",
+        status=AnalysisStatus.COMPLETED,
         rule=ORDER_OWNERSHIP_RULE,
         finding=finding,
         graph=graph,
