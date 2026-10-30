@@ -12,12 +12,6 @@ import { WorkflowSection } from "../components/landing/WorkflowTabs";
 
 const BOOT_MS = 1500;
 
-/**
- * Forge landing page (route: /).
- * Composition only — sections live under src/components/landing/.
- * Opens with a brief boot splash (skipped for reduced motion), then a
- * scroll-progress hairline tracks reading position under the nav.
- */
 export default function Home() {
   const reduceMotion = useReducedMotion();
   const [booting, setBooting] = useState(!reduceMotion);
