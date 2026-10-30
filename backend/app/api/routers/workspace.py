@@ -1,0 +1,80 @@
+"""Project workspace and code-index endpoints."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.code_intelligence import CodeIndex
+from app.schemas.workspace import ProjectManifest, ProjectReference
+from app.services.project_workspace import WorkspaceError, WorkspaceService
+from app.services.python_indexer import PythonIndexer
+
+
+def _default_root() -> Path:
+    configured = os.environ.get("FORGE_WORKSPACE_ROOT")
+    if configured:
+        return Path(configured).expanduser()
+    return Path.cwd() / "workspaces"
+
+
+workspace_service = WorkspaceService(_default_root())
+_indexer = PythonIndexer()
+
+
+class OpenProjectRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = "."
+    name: str | None = None
+
+
+router = APIRouter(prefix="/api/workspace", tags=["workspace"])
+
+
+@router.post("/projects", response_model=ProjectReference)
+def open_project(request: OpenProjectRequest) -> ProjectReference:
+    """Register an existing directory inside the configured workspace root."""
+    try:
+        return workspace_service.register_project(request.path, request.name)
+    except WorkspaceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/projects/{project_id}", response_model=ProjectReference)
+def get_project(project_id: str) -> ProjectReference:
+    try:
+        return workspace_service.get_project(project_id)
+    except WorkspaceError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get(
+    "/projects/{project_id}/manifest", response_model=ProjectManifest
+)
+def get_manifest(project_id: str) -> ProjectManifest:
+    try:
+        return workspace_service.manifest(project_id)
+    except WorkspaceError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get("/projects/{project_id}/files")
+def list_files(project_id: str) -> dict:
+    try:
+        files = workspace_service.iter_files(project_id)
+    except WorkspaceError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return {"project_id": project_id, "files": [f.model_dump() for f in files]}
+
+
+@router.get("/projects/{project_id}/index", response_model=CodeIndex)
+def get_index(project_id: str) -> CodeIndex:
+    try:
+        workspace_service.get_project(project_id)
+        return _indexer.index_project(workspace_service, project_id)
+    except WorkspaceError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
