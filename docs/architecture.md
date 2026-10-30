@@ -1,66 +1,101 @@
 # Forge Guard Architecture
 
-## Boundaries
+Forge Guard is a modular FastAPI monolith with two distinct workflows:
 
-Forge Guard remains a modular monolith:
+1. Source-to-Graph: inspect existing Python projects and represent their architecture.
+2. Graph-to-Code: validate user-constructed Function graphs and generate Python.
 
-```text
-frontend/   React presentation and graph visualisation
-backend/    FastAPI contracts, controlled example, analysis, verification
-docs/       Shared architecture and workflow documentation
-```
+The backend is authoritative for project data, indexing results, graph data, findings, proposals, and verification results. The frontend renders returned data and does not infer source facts.
 
-The backend is authoritative for analysis status, findings, graph evidence,
-fix-proposal status, and verification results. The frontend renders returned
-data and must not infer that a missing UI node proves a source vulnerability.
+## Source-to-Graph pipeline
 
-## Backend modules
+1. Project registration
+   - `WorkspaceService` resolves a client-supplied relative path inside the configured workspace root.
+   - It assigns a stable project ID and stores the server-side project root.
 
-- `backend/app/main.py` configures FastAPI and mounts routers.
-- `backend/app/security_demo.py` contains the isolated vulnerable/corrected
-  order endpoint and in-memory fixtures.
-- `backend/app/schemas/security.py` defines shared findings, evidence, graph,
-  proposal, and verification objects.
-- `backend/app/services/security_analysis.py` performs deterministic AST
-  analysis of the controlled example and builds semantic graph data.
-- `backend/app/services/security_verification.py` executes the controlled
-  endpoint checks and records actual outcomes.
-- `backend/app/api/routers/security.py` exposes the minimum analysis contract.
+2. Workspace discovery
+   - Files are enumerated with ignored directories pruned.
+   - Sensitive configuration files, oversized files, and files outside the root are excluded or reported.
+   - File metadata includes size and SHA-256 hash.
 
-The earlier Function graph contract and `/api/graph/*` endpoints remain
-available for the existing graph-to-Python demonstration.
+3. Python AST indexing
+   - `PythonIndexer` parses Python files using the standard-library `ast` module.
+   - It records modules, imports, classes, methods, functions, decorators, parameters, return annotations, calls, attribute accesses, source references, and file hashes.
+   - It does not perform semantic analysis or security reasoning.
 
-## Source-of-truth decision
+4. Symbol resolution
+   - `SymbolResolver` resolves structural relationships from the `CodeIndex`.
+   - It supports absolute and relative imports, imported symbols, cross-module calls, class method definitions, module dependencies, and method calls where a class can be identified.
+   - Resolution statuses are `resolved`, `ambiguous`, or `unresolved`.
+   - Unresolved calls are retained as observations and are not connected to arbitrary symbols.
 
-Forge Guard uses a controlled code-first approach for this MVP. The detector
-inspects the actual source of the controlled FastAPI functions using Python's
-standard `ast` module. It checks for:
+5. SourceGraph generation
+   - `SourceGraphBuilder` converts the `CodeIndex` and `ResolutionResult` into a read-only `SourceGraph`.
+   - Nodes: project, module, class, function, method, route (only when a route decorator is present).
+   - Edges: CONTAINS, DEFINES, DEFINES_METHOD, IMPORTS, DEPENDS_ON, CALLS, HANDLES_ROUTE.
+   - Every node and edge preserves source references, file hashes, and evidence where available.
 
-1. authentication through `_authenticate_customer`;
-2. order retrieval through the in-memory order collection;
-3. an ownership comparison involving `order.owner_id` and the authenticated
-   customer before return.
+6. API exposure
+   - Workspace, indexing, and SourceGraph endpoints expose structured data to the frontend and future agent integration.
+   - Source code contents are not embedded in graph responses; existing file endpoints provide source details.
 
-The graph is derived from those observed source facts. It is not treated as
-proof independently of source analysis.
+## Graph-to-Code workflow
 
-## Agents and tools
+The existing `/api/graph/*` endpoints remain separate and unchanged.
 
-Agents make bounded decisions and coordinate workflows. Tools expose explicit
-capabilities. This backend provides analysis and verification tool contracts;
-it does not implement Ram's orchestrator or Bisal's Meta model client.
+Supported:
 
-The backend returns a review-only `FixProposal`. Applying a proposal requires a
-future human-review and controlled patch boundary; no file is modified by the
-current endpoints.
+- Function nodes.
+- `calls` relationships.
+- Stable dependency ordering.
+- Deterministic Python generation.
+- `ast.parse` syntax validation.
 
-## Deferred work
+Unsupported or rejected:
 
-- General FastAPI/Python project analysis
-- Additional vulnerability categories
-- Meta model integration
-- Agent orchestration
-- Human approval and patch application
-- Persistence and project loading
-- Production authentication
-- Full graph visualiser integration
+- Other node types.
+- Data-flow edges.
+- Cycles, self-calls, multiple calls per caller, and incompatible interfaces.
+
+## Security investigation
+
+Implemented today:
+
+- A controlled order-ownership demonstration in `app/security_demo.py`.
+- Deterministic AST evidence extraction for the known vulnerable and corrected functions.
+- Evidence-backed findings and an evidence-derived semantic graph.
+- Review-only fix proposals.
+- Human approval, application, verification, and rollback for the controlled file.
+
+Planned for Phase 3:
+
+- General security investigation over SourceGraph and project indexes.
+- Agent-assisted rule interpretation with evidence gating.
+- Confirmed findings only after source evidence and verification.
+
+The planned AI workflow is not implemented yet.
+
+## Agent integration
+
+The backend provides structured project information, source evidence, graph data, and controlled operations. Ram's orchestration layer coordinates iterative AI reasoning and tool calls. The backend does not implement a second orchestrator.
+
+## Code modification and verification
+
+Implemented capabilities:
+
+- Review-only fix proposals.
+- Human-only approval; AI actors cannot approve.
+- Path and source-hash checks before application.
+- Atomic writes and rollback.
+- Controlled HTTP verification with actual outcomes.
+
+General arbitrary file creation and command execution are not implemented.
+
+## Service responsibilities
+
+- `project_workspace.py`: project registration, safe file discovery, metadata, hashing, and reading.
+- `python_indexer.py`: structural Python AST facts.
+- `symbol_resolution.py`: structural relationship resolution with explicit statuses.
+- `source_graph_builder.py`: read-only SourceGraph construction.
+- `security_analysis.py`, `security_fixes.py`, `security_verification.py`: controlled security demonstration and fix workflow.
+- `graph_validation.py`, `code_generation.py`: Function graph validation and Python generation.
