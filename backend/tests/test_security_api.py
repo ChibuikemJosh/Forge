@@ -13,6 +13,7 @@ def test_analyze_vulnerable_demo_returns_finding_graph_and_verification() -> Non
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "completed"
+    assert body["outcome"] == "confirmed"
     assert body["finding"]["rule_id"] == "order-ownership-authorization"
     assert body["fix_proposal"]["review_status"] == "pending"
     assert body["fix_proposal"]["application_status"] == "not_applied"
@@ -27,6 +28,7 @@ def test_analyze_corrected_demo_has_no_finding() -> None:
 
     assert response.status_code == 200
     body = response.json()
+    assert body["outcome"] == "satisfied"
     assert body["finding"] is None
     assert body["verification"]["passed"] is True
     assert any(node["type"] == "authorization" for node in body["graph"]["nodes"])
@@ -40,6 +42,38 @@ def test_analyze_can_skip_verification() -> None:
     assert body["status"] == "completed"
     assert body["verification"] is None
     assert body["finding"]["verification_status"] == "not_run"
+
+
+def test_analyze_marks_behavior_mismatch_inconclusive(
+    monkeypatch,
+) -> None:
+    from app.api.routers import security as security_router
+    from app.schemas.security import VerificationResult, VerificationStatus
+
+    monkeypatch.setattr(
+        security_router,
+        "verify_demo",
+        lambda corrected, finding_id: VerificationResult(
+            verification_id="verification-test",
+            finding_id=finding_id,
+            tested="controlled mismatch",
+            executed=True,
+            passed=False,
+            status=VerificationStatus.FAILED,
+            summary="The controlled response did not match the expected behavior.",
+        ),
+    )
+
+    response = client.post("/api/security/analyze")
+
+    assert response.status_code == 200
+    assert response.json()["outcome"] == "inconclusive"
+
+
+def test_analyze_rejects_invalid_query_values() -> None:
+    response = client.post("/api/security/analyze?corrected=unknown")
+
+    assert response.status_code == 422
 
 
 def test_analyze_returns_failed_status_without_fabricated_success(

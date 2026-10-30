@@ -21,7 +21,16 @@ def test_vulnerable_analysis_returns_finding_and_exposure_graph() -> None:
     assert finding.evidence.authenticated_customer is True
     assert finding.evidence.retrieves_order is True
     assert finding.evidence.checks_order_ownership is False
+    assert finding.evidence.explanation.endswith("without comparing its owner.")
+    assert finding.confidence.value == "high"
     assert any(edge.relationship == "exposes" for edge in graph.edges)
+    assert {node.id for node in graph.nodes} >= {
+        "customer",
+        "retrieve",
+        "order",
+        "response",
+        "finding-order-ownership-001",
+    }
     assert not any(node.type == "authorization" for node in graph.nodes)
 
 
@@ -31,6 +40,7 @@ def test_corrected_analysis_has_no_finding_and_contains_authorization() -> None:
     assert finding is None
     assert any(node.type == "authorization" for node in graph.nodes)
     assert any(edge.relationship == "authorizes" for edge in graph.edges)
+    assert any(node.type == "order" for node in graph.nodes)
 
 
 def test_verification_executes_and_reports_actual_state() -> None:

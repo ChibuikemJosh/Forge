@@ -41,3 +41,12 @@ def test_missing_authentication_is_rejected() -> None:
     response = client.get("/api/demo/corrected/orders/order-alice")
 
     assert response.status_code == 401
+
+
+def test_nonexistent_order_is_rejected_in_both_states() -> None:
+    for state in ("vulnerable", "corrected"):
+        response = client.get(
+            f"/api/demo/{state}/orders/order-does-not-exist",
+            headers={"x-customer-id": "customer-alice"},
+        )
+        assert response.status_code == 404
