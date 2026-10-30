@@ -67,14 +67,21 @@ class ReviewActor(str, Enum):
 
 
 class SourceReference(BaseModel):
-    """A source location known by the controlled analyzer."""
+    """A source location known by the controlled analyzer.
+
+    ``project_id`` and ``module`` are optional so existing callers keep working;
+    the Python indexer populates them for source-to-graph provenance.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
+    project_id: str | None = None
     file_path: str
+    module: str | None = None
     symbol: str
     line_start: int | None = None
     line_end: int | None = None
+    file_hash: str | None = None
 
 
 class SecurityRule(BaseModel):
