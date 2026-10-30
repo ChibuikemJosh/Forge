@@ -281,41 +281,28 @@ class PythonIndexer:
 
     def _index_nested(
         self,
-        body: list[ast.stmt],
-        project_id: str,
-        relative_path: str,
-        module_name: str,
-        class_name: str | None,
-        qualified_prefix: str,
-        functions: list[IndexedFunction],
-        module_function_ids: list[str],
-    ) -> None:
-        for stmt in body:
-            for node in ast.walk(stmt):
-                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    continue
-                # Only direct nested functions: ensure parent is not itself nested deeper.
-                # We handle by recursion on immediate function bodies only.
-                pass
-        # Recurse one level into immediate nested function definitions.
+        body,
+        project_id,
+        relative_path,
+        module_name,
+        class_name,
+        qualified_prefix,
+        functions,
+        module_function_ids,
+    ):
         for stmt in body:
             if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                nested_prefix = (
+                    qualified_prefix + '.<locals>' if qualified_prefix else '<locals>'
+                )
                 func = self._index_function(
                     stmt,
                     project_id,
                     relative_path,
                     module_name,
-                    class_name=class_name,
-                    qualified_prefix=qualified_prefix,
+                    class_name=None,
+                    qualified_prefix=nested_prefix,
                 )
-                # Adjust qualified name to include <locals>.
-                if not func.qualified_name.startswith(qualified_prefix + ".<locals>."):
-                    func.qualified_name = (
-                        f"{qualified_prefix}.<locals>.{stmt.name}"
-                        if qualified_prefix
-                        else f"<locals>.{stmt.name}"
-                    )
-                    func.id = _symbol_id(project_id, relative_path, func.qualified_name)
                 functions.append(func)
                 module_function_ids.append(func.id)
                 self._index_nested(
@@ -323,24 +310,27 @@ class PythonIndexer:
                     project_id,
                     relative_path,
                     module_name,
-                    class_name=class_name,
-                    qualified_prefix=func.qualified_name,
-                    functions=functions,
-                    module_function_ids=module_function_ids,
+                    None,
+                    func.qualified_name,
+                    functions,
+                    module_function_ids,
                 )
-            elif isinstance(stmt, (ast.For, ast.While, ast.If, ast.With, ast.Try, ast.ExceptHandler)):
-                nested_body = getattr(stmt, "body", []) + getattr(stmt, "orelse", []) + getattr(stmt, "finalbody", [])
+            elif isinstance(stmt, (ast.For, ast.While, ast.If, ast.With, ast.Try)):
+                nested_body = list(getattr(stmt, 'body', []))
+                nested_body += list(getattr(stmt, 'orelse', []))
+                nested_body += list(getattr(stmt, 'finalbody', []))
+                for handler in getattr(stmt, 'handlers', []):
+                    nested_body += list(getattr(handler, 'body', []))
                 self._index_nested(
                     nested_body,
                     project_id,
                     relative_path,
                     module_name,
-                    class_name=class_name,
-                    qualified_prefix=qualified_prefix,
-                    functions=functions,
-                    module_function_ids=module_function_ids,
+                    class_name,
+                    qualified_prefix,
+                    functions,
+                    module_function_ids,
                 )
-
 
 def _module_name(relative_path: str) -> str:
     path = Path(relative_path)
