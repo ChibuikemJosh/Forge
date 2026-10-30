@@ -1,68 +1,63 @@
-# Forge Project Model Direction
+# Forge Project Model
 
-Forge will represent real software components (not just diagrams) so that the
-graph, the code, and AI-assisted changes stay consistent. This document
-describes the initial direction. Task A implements only a minimal foundation;
-the full model is built incrementally with the features that need it.
+## Graph contract
 
-## Current foundation model
+A graph contains `nodes` and `edges`.
 
-Task A defines a deliberately small TypeScript model in
-`src/core/project-model/types.ts`:
+Each node has:
 
-- `ForgeProject`: project id, name, supported language (`python`), and model
-  version.
+- `id`: stable unique identifier.
+- `type`: currently `function`.
+- `name`: Python function name.
+- `config.parameters`: ordered parameter declarations with name, type, and
+  optional simple default.
+- `config.return_type`: supported return type name.
+- `inputs` and `outputs`: optional explicit ports. When supplied, inputs must
+  match parameters and the single output must match the return type.
 
-This type exists because the current empty-project UI displays these fields
-concretely. Nothing more is defined yet because nothing uses it.
+Each edge has:
 
-## Future component model
+- `id`: stable unique identifier.
+- `source`: caller/source node ID.
+- `target`: callee/target node ID.
+- `type`: relationship meaning.
 
-A future component is expected to identify:
+## Initial relationship semantics
 
-- A stable unique ID.
-- A component type/category (e.g. function, schema, API, test).
-- A human-readable name.
-- Typed input / output ports.
-- Configurable properties.
-- Its implementation/source location (mapping to real code).
-- Dependencies on other components.
-- Version and validation state.
+`calls` is the first fully supported relationship. Its direction is explicit:
 
-## Future graph model
+```text
+find_products ──calls──> search_products
+```
 
-A future graph will contain component instances and typed connections.
+This means `find_products` invokes `search_products`. The generated call uses
+the caller's declared parameter names, and the caller/callee parameter lists
+must match by name and type.
 
-Connection kinds are intentionally distinct and not interchangeable:
+`passes_input` and `returns_output` are reserved relationship values. They are
+rejected by Deliverable 1 rather than treated as aliases for `calls`.
 
-- **data** — values flowing from a source port to a target port.
-- **execution** — control flow ordering between components.
-- **dependency** — a component depends on another component's definition or
-  interface.
+## Validation rules
 
-Each kind carries different validity rules and different meaning for code
-generation and analysis, so they will be validated independently rather than
-treated as generic edges.
+The backend rejects:
 
-## Design principles
+- duplicate node IDs or edge IDs;
+- missing edge node references;
+- unsupported node or relationship types;
+- invalid or duplicate Python names;
+- unsupported type names;
+- inconsistent explicit ports;
+- incompatible caller/callee parameters;
+- self-calls;
+- multiple calls edges from one caller;
+- dependency cycles.
 
-- The model must correspond to actual project components and source code, not
-  exist solely as a visual diagram.
-- Introduce schema pieces only when a concrete feature consumes them; avoid a
-  large, speculative final schema before the initial implementation
-  requirements are known.
-- Keep the frontend and backend representations aligned; define a single
-  source of truth (starting from the backend) when analysis features arrive,
-  rather than maintaining duplicate conflicting models.
+Validation returns structured error codes and relevant node or edge IDs. Code
+generation cannot run successfully for an invalid graph.
 
-## Task A boundaries
+## Evolution
 
-Not implemented in Task A:
-
-- Graph engine behaviour (node creation, connections, serialization).
-- Source-code parsing / mapping.
-- Persistence schema.
-- Code generation.
-- AI proposal model contracts.
-
-These are scoped to later, explicitly defined tasks.
+The model deliberately supports only the feature that currently consumes it.
+Future node types, data-flow and execution semantics, source locations,
+versions, persistence, and project retrieval can be added as separate
+contracts rather than weakening the meaning of the initial `calls` edge.
