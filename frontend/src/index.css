@@ -16,6 +16,23 @@
   --color-panel: #131315;
   --color-panel-2: #1a1a1d;
   --color-line: #262629;
+  /* Workspace (IDE) chrome — VS Code-dark inspired, ember stays the accent */
+  --font-ui: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-ide-bg: #0a0a0b;
+  --color-ide-bar: #111113;
+  --color-ide-hover: #1f1f22;
+  --color-ide-active: #2a2a2e;
+  --color-ide-blue: #3794ff;
+  --color-folder: #dcb67a;
+  --color-py-blue: #4b8bbe;
+  --color-py-yellow: #ffd43b;
+  --color-md-blue: #519aba;
+  --color-cfg-zinc: #a1a1aa;
+  --color-sev-critical: #f87171;
+  --color-sev-warning: #fbbf24;
+  --color-sev-info: #60a5fa;
+  --color-test-pass: #4ade80;
+  --color-edge: #8a6d4b;
 }
 
 html {
@@ -33,6 +50,27 @@ body {
 ::selection {
   background: #c2410c;
   color: #fff;
+}
+
+/* Workspace scrollbars: thumb only, no track/background (VS Code style). */
+.workspace-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+.workspace-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.workspace-scroll::-webkit-scrollbar-track,
+.workspace-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.workspace-scroll::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 999px;
+}
+.workspace-scroll::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }
 
 /* React Flow (@xyflow/react) dark chrome to match the Forge panels. */
