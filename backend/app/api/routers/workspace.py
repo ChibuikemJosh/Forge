@@ -9,9 +9,12 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.code_intelligence import CodeIndex
+from app.schemas.source_graph import SourceGraph
 from app.schemas.workspace import ProjectManifest, ProjectReference
 from app.services.project_workspace import WorkspaceError, WorkspaceService
 from app.services.python_indexer import PythonIndexer
+from app.services.source_graph_builder import SourceGraphBuilder
+from app.services.symbol_resolution import SymbolResolver
 
 
 def _default_root() -> Path:
@@ -23,6 +26,8 @@ def _default_root() -> Path:
 
 workspace_service = WorkspaceService(_default_root())
 _indexer = PythonIndexer()
+_resolver = SymbolResolver()
+_builder = SourceGraphBuilder()
 
 
 class OpenProjectRequest(BaseModel):
@@ -76,5 +81,19 @@ def get_index(project_id: str) -> CodeIndex:
     try:
         workspace_service.get_project(project_id)
         return _indexer.index_project(workspace_service, project_id)
+    except WorkspaceError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.get(
+    "/projects/{project_id}/source-graph", response_model=SourceGraph
+)
+def get_source_graph(project_id: str) -> SourceGraph:
+    """Build and return a read-only SourceGraph for a registered project."""
+    try:
+        reference = workspace_service.get_project(project_id)
+        index = _indexer.index_project(workspace_service, project_id)
+        resolution = _resolver.resolve(index)
+        return _builder.build(reference, index, resolution)
     except WorkspaceError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
