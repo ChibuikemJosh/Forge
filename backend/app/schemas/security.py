@@ -19,6 +19,21 @@ class AnalysisStatus(str, Enum):
     FAILED = "failed"
 
 
+class AnalysisOutcome(str, Enum):
+    """Evidence-backed security conclusion for an analysis."""
+
+    CONFIRMED = "confirmed"
+    SATISFIED = "satisfied"
+    INCONCLUSIVE = "inconclusive"
+    FAILED = "failed"
+
+
+class Confidence(str, Enum):
+    """Confidence level for a security finding."""
+
+    HIGH = "high"
+
+
 class VerificationStatus(str, Enum):
     """Status of security verification for a finding."""
 
@@ -42,6 +57,13 @@ class ApplicationStatus(str, Enum):
     NOT_APPLIED = "not_applied"
     APPLIED = "applied"
     FAILED = "failed"
+
+
+class ReviewActor(str, Enum):
+    """Actor type allowed to record a proposal decision."""
+
+    HUMAN = "human"
+    AI = "ai"
 
 
 class SourceReference(BaseModel):
@@ -75,6 +97,7 @@ class AnalysisEvidence(BaseModel):
     checks_order_ownership: bool
     ownership_expression: str | None = None
     source: SourceReference
+    explanation: str
 
 
 class SecurityFinding(BaseModel):
@@ -92,6 +115,9 @@ class SecurityFinding(BaseModel):
     evidence: AnalysisEvidence
     impact: str
     suggested_remediation: str
+    severity_rationale: str
+    confidence: Confidence
+    confidence_rationale: str
     analysis_status: AnalysisStatus
     verification_status: VerificationStatus = VerificationStatus.NOT_RUN
 
@@ -154,9 +180,30 @@ class FixProposal(BaseModel):
     finding_id: str
     file_path: str
     unified_diff: str | None = None
+    affected_code: str | None = None
     explanation: str
+    limitations: str
+    expected_source_hash: str | None = None
+    verification_status: VerificationStatus = VerificationStatus.NOT_RUN
+    verification_output: str | None = None
+    rollback_available: bool = False
     review_status: ReviewStatus = ReviewStatus.PENDING
     application_status: ApplicationStatus = ApplicationStatus.NOT_APPLIED
+
+
+class FixApplicationResponse(BaseModel):
+    """Result of applying and verifying a reviewed fix proposal."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    proposal_id: str
+    file_path: str
+    application_status: ApplicationStatus
+    verification_status: VerificationStatus
+    verification_command: str
+    verification_output: str | None = None
+    rollback_available: bool
+    error: str | None = None
 
 
 class SecurityAnalysisResponse(BaseModel):
@@ -169,9 +216,46 @@ class SecurityAnalysisResponse(BaseModel):
     analysis_id: str
     project_id: str
     status: AnalysisStatus
+    outcome: AnalysisOutcome
     rule: SecurityRule
     finding: SecurityFinding | None
     graph: SecurityGraph
     fix_proposal: FixProposal | None = None
     verification: VerificationResult | None = None
     error: str | None = None
+
+
+class ReviewDecision(str, Enum):
+    """Human review decision on a proposed fix."""
+
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class ReviewDecisionRequest(BaseModel):
+    """Human review input for a pending fix proposal."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision: ReviewDecision
+    reviewer: str
+    actor: ReviewActor = ReviewActor.HUMAN
+    reason: str | None = None
+
+
+class ReviewDecisionRecord(BaseModel):
+    """A recorded human review decision for a fix proposal.
+
+    Kept separate from ``FixProposal`` so the proposal itself remains a
+    reviewable artifact while the decision log is append-only.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision_id: str
+    proposal_id: str
+    decision: ReviewDecision
+    reviewer: str | None = None
+    actor: ReviewActor = ReviewActor.HUMAN
+    reason: str | None = None
+    decided_at: str | None = None
