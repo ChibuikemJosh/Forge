@@ -9,10 +9,13 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.code_intelligence import CodeIndex
+from app.schemas.security import SecurityRule
+from app.schemas.security_investigation import InvestigationResult
 from app.schemas.source_graph import SourceGraph
 from app.schemas.workspace import ProjectManifest, ProjectReference
 from app.services.project_workspace import WorkspaceError, WorkspaceService
 from app.services.python_indexer import PythonIndexer
+from app.services.security_investigation import SecurityInvestigationService
 from app.services.source_graph_builder import SourceGraphBuilder
 from app.services.symbol_resolution import SymbolResolver
 
@@ -26,6 +29,7 @@ def _default_root() -> Path:
 
 workspace_service = WorkspaceService(_default_root())
 _indexer = PythonIndexer()
+_investigator = SecurityInvestigationService(workspace_service)
 _resolver = SymbolResolver()
 _builder = SourceGraphBuilder()
 
@@ -38,6 +42,13 @@ class OpenProjectRequest(BaseModel):
 
 
 router = APIRouter(prefix="/api/workspace", tags=["workspace"])
+
+
+class InvestigateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rule: SecurityRule
+
 
 
 @router.post("/projects", response_model=ProjectReference)
@@ -95,5 +106,20 @@ def get_source_graph(project_id: str) -> SourceGraph:
         index = _indexer.index_project(workspace_service, project_id)
         resolution = _resolver.resolve(index)
         return _builder.build(reference, index, resolution)
+    except WorkspaceError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/projects/{project_id}/investigate", response_model=InvestigationResult)
+def investigate_project(project_id: str, request: InvestigateRequest) -> InvestigationResult:
+    """Investigate a registered project against a security rule."""
+    try:
+        reference = workspace_service.get_project(project_id)
+        index = _indexer.index_project(workspace_service, project_id)
+        from app.services.symbol_resolution import SymbolResolver
+        from app.services.source_graph_builder import SourceGraphBuilder
+        resolution = SymbolResolver().resolve(index)
+        graph = SourceGraphBuilder().build(reference, index, resolution)
+        return _investigator.investigate(reference, index, graph, request.rule)
     except WorkspaceError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
