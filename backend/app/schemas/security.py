@@ -92,6 +92,15 @@ class SecurityRule(BaseModel):
     rule_id: str
     title: str
     invariant: str
+    name: str | None = None
+    description: str | None = None
+    category: str | None = None
+    severity: Severity = Severity.HIGH
+    expected_property: str | None = None
+    concepts: list[str] = Field(default_factory=list)
+    indicators: list[str] = Field(default_factory=list)
+    guidance: str | None = None
+    examples: list[str] = Field(default_factory=list)
 
 
 class AnalysisEvidence(BaseModel):
