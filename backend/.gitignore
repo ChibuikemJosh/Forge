@@ -29,3 +29,6 @@ lerna-debug.log*
 __pycache__/
 .pytest_cache/
 *.pyc
+
+# Secrets (Meta Model API key lives in .env)
+.env

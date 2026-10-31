@@ -2,6 +2,12 @@
 # Minimum versions; pip resolves the latest compatible releases.
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0
+python-dotenv>=1.0,<2.0
+
+# ViolationsFinderAgent (LangChain/LangGraph + Meta Model API)
+langchain>=0.3,<1.0
+langgraph>=0.6,<1.0
+langchain-openai>=0.3,<1.0
 
 # Testing
 pytest>=8.0,<9.0
